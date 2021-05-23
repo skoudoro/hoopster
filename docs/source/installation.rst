@@ -4,4 +4,4 @@ Installation
 
 At the command line::
 
-    $ pip install pyeuroleague
+    $ pip install hoopster

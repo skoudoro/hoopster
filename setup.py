@@ -7,10 +7,10 @@ import versioneer
 # NOTE: This file must remain Python 2 compatible for the foreseeable future,
 # to ensure that we error out properly for people with outdated setuptools
 # and/or pip.
-min_version = (3, 6)
+min_version = (3, 7)
 if sys.version_info < min_version:
     error = """
-pyeuroleague does not support Python {0}.{1}.
+hoopster does not support Python {0}.{1}.
 Python {2}.{3} and above is required. Check your Python version like so:
 
 python3 --version
@@ -34,15 +34,15 @@ with open(path.join(here, 'requirements.txt')) as requirements_file:
 
 
 setup(
-    name='pyeuroleague',
+    name='hoopster',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description="API for Euroleague Basketball and Eurocup Basketball data",
+    description="API for hoopster Basketball and Eurocup Basketball data",
     long_description=readme,
     long_description_content_type='text/markdown',
     author="Serge Koudoro",
     author_email='skab12@gmail.com',
-    url='https://github.com/skoudoro/pyeuroleague',
+    url='https://github.com/skoudoro/hoopster',
     python_requires='>={}'.format('.'.join(str(n) for n in min_version)),
     packages=find_packages(exclude=['docs', 'tests']),
     entry_points={
@@ -52,7 +52,7 @@ setup(
     },
     include_package_data=True,
     package_data={
-        'euroleague': [
+        'hoopster': [
             # When adding files here, remember to update MANIFEST.in as well,
             # or else they will not be included in the distribution on PyPI!
             # 'path/to/data_file',

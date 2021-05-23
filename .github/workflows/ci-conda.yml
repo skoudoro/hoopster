@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
@@ -32,15 +32,15 @@ jobs:
       with:
         auto-update-conda: true
         auto-activate-base: false
-        activate-environment: pyeuroleague-ci
+        activate-environment: hoopster-ci
         python-version: ${{ matrix.python-version }}
         channels: defaults,conda-forge
         use-only-tar-bz2: true
     - name: Install dependencies
       shell: pwsh
       run: |
-        conda install --yes -n pyeuroleague-ci flake8 pytest
-        conda install --yes -n pyeuroleague-ci --file=requirements.txt --file=requirements-dev.txt
+        conda install --yes -n hoopster-ci flake8 pytest
+        conda install --yes -n hoopster-ci --file=requirements.txt --file=requirements-dev.txt
     - name: Lint with flake8
       shell: pwsh
       run: |
@@ -52,4 +52,4 @@ jobs:
       shell: pwsh
       run: |
         pip install -e .
-        pytest -svv pyeuroleague
+        pytest -svv hoopster

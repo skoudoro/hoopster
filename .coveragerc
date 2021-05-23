@@ -1,6 +1,6 @@
 [run]
 source =
-    euroleague
+    hoopster
 [report]
 omit =
     */python?.?/*

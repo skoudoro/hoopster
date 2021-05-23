@@ -5,6 +5,6 @@ exclude =
     build,
     dist,
     versioneer.py,
-    euroleague/_version.py,
+    hoopster/_version.py,
     docs/source/conf.py
 max-line-length = 80

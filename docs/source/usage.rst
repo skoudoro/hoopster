@@ -2,8 +2,8 @@
 Usage
 =====
 
-Start by importing pyEuroleague.
+Start by importing hoopster.
 
 .. code-block:: python
 
-    import euroleague
+    import hoopster
