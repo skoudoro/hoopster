@@ -2,45 +2,7 @@
 
 import requests
 from urllib.parse import urlencode, urljoin
-from mailerlite.constants import MAILERLITE_API_V2_URL, VALID_REQUEST_METHODS
-
-
-def check_headers(headers):
-    """Return True if the headers have the required keys.
-
-    Parameters
-    ----------
-    headers : dict
-        should contains 'content-type' and 'x-mailerlite-apikey'
-
-    Returns
-    -------
-    valid_headers : bool
-        True if it is valid
-    error_msg : str
-        the error message if there is any problem
-
-    """
-    valid_headers = True
-    error_msg = ''
-    if not headers:
-        error_msg = "Empty headers. Please enter a valid one"
-        valid_headers = False
-        return valid_headers, error_msg
-
-    if not isinstance(headers, dict):
-        error_msg = "headers should be a dictionnary"
-        valid_headers = False
-        return valid_headers, error_msg
-
-    if ('content-type' not in headers or
-       'x-mailerlite-apikey' not in headers):
-        error_msg = "headers should be a dictionnary and it contains "
-        error_msg += "'content-type' and 'x-mailerlite-apikey' as keys"
-        valid_headers = False
-        return valid_headers, error_msg
-
-    return valid_headers, error_msg
+from hoopster.constants import API_URLS, VALID_REQUEST_METHODS
 
 
 def build_url(*path, **queryparams):
@@ -56,9 +18,13 @@ def build_url(*path, **queryparams):
     url : str
       desired path
     """
+    version = queryparams.pop("version", 2.0)
+
     url = '/'.join(map(str, path))
     if queryparams:
         url += '?{}'.format(urlencode(queryparams))
+
+    url = urljoin(API_URLS.get(version), url)
     return url
 
 
@@ -80,16 +46,13 @@ def make_request(url, method, headers=None, data=None,
 
     Returns
     -------
-    response : int
+    response :
         response value
-    content : dict
-        The JSON output from the API
     """
     if method not in VALID_REQUEST_METHODS:
         raise ValueError("Incorrect request method. method should be "
                          "{}".format(VALID_REQUEST_METHODS))
 
-    url = urljoin(MAILERLITE_API_V2_URL, url)
     hooks = hooks or requests.hooks.default_hooks()
     headers = headers or requests.utils.default_headers()
     try:
@@ -104,14 +67,12 @@ def make_request(url, method, headers=None, data=None,
         raise e
     else:
         if response.status_code >= 400:
-            print(response.json())
+            print(response.text)
             raise IOError(response)
 
         if response.status_code == 204:
             return None
-        return response.status_code, response.json()
-
-    return response.status_code, response.json()
+        return response
 
 
 def post(url, body=None, **kwargs):
