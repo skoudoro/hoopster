@@ -18,13 +18,16 @@ class Venue:
 
 @dataclass(frozen=True)
 class Country:
+    """Object for defining a country."""
+
     code: str
     name: str = None
 
 
 @dec.nested_dataclass(frozen=True)
-class Referees:
-    '''Object for tracking physical books in a collection.'''
+class Referee:
+    """Object for defining a referee."""
+
     code: str
     name: str = None
     alias: str = None
@@ -40,8 +43,10 @@ class Referees:
     #         self.country = Country(code=self.nationality)
 
 
-@nested_dataclass(frozen=True)
-class People:
+@dec.nested_dataclass(frozen=True)
+class Person:
+    """Object for defining a person."""
+
     code: str
     name: str = None
     alias: str = None
@@ -61,7 +66,7 @@ class People:
 
 def _parse_referees(xml_data):
     root = etree.fromstring(bytes(xml_data, encoding='utf-8'))
-    referees = [Referees(**dict(r.items())) for r in root.findall('referee')]
+    referees = [Referee(**dict(r.items())) for r in root.findall('referee')]
     return referees
 
 
@@ -82,7 +87,7 @@ def referees(offset=0, limit=500):
     params = {'version': 2.0, 'offset': offset, 'limit': limit}
     url = client.build_url('referees', **params)
     res = client.get(url)
-    return [Referees(**r) for r in res.json()]
+    return [Referee(**r) for r in res.json()]
 
 
 def referee(referee_code):
@@ -91,7 +96,7 @@ def referee(referee_code):
     params = {'version': 2.0}
     url = client.build_url('referees', referee_code, **params)
     res = client.get(url)
-    return Referees(**res.json())
+    return Referee(**res.json())
 
 
 def venues(offset=0, limit=500):
@@ -119,7 +124,7 @@ def people(offset=0, limit=500):  # 13336 persons on May 26.
     url = client.build_url('people', **params)
     res = client.get(url)
     # import ipdb; ipdb.set_trace()
-    return [People(**utils.normalize_keys(r)) for r in res.json()]
+    return [Person(**utils.normalize_keys(r)) for r in res.json()]
 
 
 def person(person_code):
@@ -128,4 +133,4 @@ def person(person_code):
     params = {'version': 2.0}
     url = client.build_url('people', person_code, **params)
     res = client.get(url)
-    return People(**utils.normalize_keys(res.json()))
+    return Person(**utils.normalize_keys(res.json()))

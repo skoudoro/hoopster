@@ -5,7 +5,7 @@ import hoopster.elb as elb
 
 def test_referees():
     r = elb.referees()
-    print(r)
+    # print(r)
 
 
 if __name__ == "__main__":
