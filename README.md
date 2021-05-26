@@ -1,6 +1,6 @@
 # hoopster
 
-Python API for hoopster and Eurocup basketball
+Python API for EuroLeague and Eurocup basketball
 
 <table align="center">
     <tr>

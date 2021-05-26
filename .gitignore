@@ -197,3 +197,7 @@ docs/source/generated/
 
 #VSCode
 .vscode/
+
+#other
+tmp.txt
+tmp/

@@ -129,23 +129,3 @@ def person(person_code):
     url = client.build_url('people', person_code, **params)
     res = client.get(url)
     return People(**utils.normalize_keys(res.json()))
-
-
-# pe = people()
-# import ipdb; ipdb.set_trace()
-# print(pe)
-# p = person("KRV")
-# print(p)
-# # ref = referees()
-# all_ref = referees()
-# print(len(all_ref))
-# ref = referee('OJDN')
-# print(ref)
-# all_venues = venues()
-# print(len(all_venues))
-# print(all_venues[15])
-# # import ipdb; ipdb.set_trace()
-# ven = venue(all_venues[15].code)
-# print(ven)
-
-
