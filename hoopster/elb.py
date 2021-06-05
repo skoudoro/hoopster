@@ -12,7 +12,7 @@ class Venue:
     capacity: int = None
     address: str = None
     images: dict = None
-    active: bool = None,
+    active: bool = None
     notes: str = None
 
 
@@ -22,6 +22,14 @@ class Country:
 
     code: str
     name: str = None
+
+
+@dataclass(frozen=True)
+class Bio:
+    """Object for defining a person bio."""
+
+    career: str = None
+    misc: str = None
 
 
 @dec.nested_dataclass(frozen=True)
@@ -62,6 +70,8 @@ class Person:
     birth_country: Country = None
     twitter_account: str = None
     images: dict = None
+    bio: Bio = None
+
 
 
 def _parse_referees(xml_data):
@@ -71,7 +81,7 @@ def _parse_referees(xml_data):
 
 
 def referees_1():
-    """Finds all
+    """Get all referees with the API v1. Experimental.
     """
     params = {'version': 1.0, }
     url = client.build_url('referees', **params)
@@ -82,7 +92,25 @@ def referees_1():
 
 
 def referees(offset=0, limit=500):
-    """Finds all referees
+    """Retrieve all registered referees from Euroleague BasketBall .
+
+    Parameters
+    ----------
+    offset: int, optional
+        Offset base zero
+    limit: int, optional
+        number of items to retrieve
+
+    Returns
+    -------
+    referees: list
+        desired venues
+
+    Notes
+    -----
+    On June 2021, there is 378 registered referees so no need to use
+    limit or offset parameters
+
     """
     params = {'version': 2.0, 'offset': offset, 'limit': limit}
     url = client.build_url('referees', **params)
@@ -91,7 +119,17 @@ def referees(offset=0, limit=500):
 
 
 def referee(referee_code):
-    """Get one referee
+    """Retrieve a referee information.
+
+    Parameters
+    ----------
+    referee_code: str
+        referee id
+
+    Returns
+    -------
+    referee: dataclass
+        all information about the referee
     """
     params = {'version': 2.0}
     url = client.build_url('referees', referee_code, **params)
@@ -100,7 +138,25 @@ def referee(referee_code):
 
 
 def venues(offset=0, limit=500):
-    """Finds all referees
+    """Retrieve all venues.
+
+    Parameters
+    ----------
+    offset: int, optional
+        Offset base zero
+    limit: int, optional
+        number of items to retrieve
+
+    Returns
+    -------
+    venues: list
+        desired venues
+
+    Notes
+    -----
+    On June 2021, there is 482 venues so no need to use limit or offset
+    parameters
+
     """
     params = {'version': 2.0, 'offset': offset, 'limit': limit}
     url = client.build_url('venues', **params)
@@ -109,7 +165,18 @@ def venues(offset=0, limit=500):
 
 
 def venue(venue_code):
-    """Get one referee
+    """Retrieve a venue information.
+
+    Parameters
+    ----------
+    venue_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
     """
     params = {'version': 2.0}
     url = client.build_url('venues', venue_code, **params)
@@ -117,20 +184,52 @@ def venue(venue_code):
     return Venue(**res.json())
 
 
-def people(offset=0, limit=500):  # 13336 persons on May 26.
-    """Get one referee
+def people(offset=0, limit=500, with_bio=True, with_seasons=True):
+    """Retrieve all registered people at Euroleague Basketball.
+
+    Parameters
+    ----------
+    offset: int, optional
+        Offset base zero
+    limit: int, optional
+        number of items to retrieve
+
+    Returns
+    -------
+    people: list
+        list of registered people based on offset and limit
+
+    Notes
+    -----
+    On June 2021, there is 13336 registered people
+
     """
     params = {'version': 2.0, 'offset': offset, 'limit': limit}
     url = client.build_url('people', **params)
     res = client.get(url)
-    # import ipdb; ipdb.set_trace()
+
+
     return [Person(**utils.normalize_keys(r)) for r in res.json()]
 
 
-def person(person_code):
-    """Get one referee
+def person_profile(person_code, add_seasons=True): #008463 # 003331  #CWC
+    """Retrieve one registered person from Euroleague BasketBall.
+
+    Parameters
+    ----------
+    person_code: str
+        person id
+
+    Returns
+    -------
+    person: dataclass
+        all information about a person
     """
     params = {'version': 2.0}
     url = client.build_url('people', person_code, **params)
     res = client.get(url)
-    return Person(**utils.normalize_keys(res.json()))
+    data = res.json()
+    bio_url = client.build_url('people', person_code, "bio", **params)
+    bio_res = client.get(bio_url)
+    data['bio'] = bio_res.json()
+    return Person(**utils.normalize_keys(data))
