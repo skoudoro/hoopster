@@ -1,7 +1,9 @@
 import re
 
+
 def remove_invalid_characters(xml_data):
     return re.sub(r'^.*?<', '<', xml_data)
+
 
 def camel_to_snake(name):
     name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)

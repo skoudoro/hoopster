@@ -9,10 +9,10 @@ def test_referees():
 
 
 if __name__ == "__main__":
-    test_referees()
-    pe = elb.people()
-    import ipdb; ipdb.set_trace()
-    print(pe)
+    # test_referees()
+    # pe = elb.people()
+    # import ipdb; ipdb.set_trace()
+    # print(pe)
     p = elb.person("KRV")
     print(p)
     # # ref = referees()
