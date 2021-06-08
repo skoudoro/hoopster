@@ -1,3 +1,5 @@
+import warnings
+
 import hoopster.client as client
 import hoopster.utils as utils
 import hoopster.decorators as dec
@@ -25,11 +27,19 @@ class Country:
 
 
 @dataclass(frozen=True)
+class Competition:
+    """Object for defining a competition."""
+
+    code: str
+    name: str = None
+
+
+@dataclass(frozen=True)
 class Bio:
     """Object for defining a person bio."""
 
-    career: str = None
-    misc: str = None
+    summary: str = None
+    highlights: str = None
 
 
 @dec.nested_dataclass(frozen=True)
@@ -73,6 +83,47 @@ class Person:
     bio: Bio = None
 
 
+@dec.nested_dataclass(frozen=True)
+class Team:
+    """Object for defining a team."""
+
+    code: str
+    name: str = None
+    alias: str = None
+    is_virtual: bool = False
+    country: Country = None
+    address: str = None
+    website: str = None
+    tickets_url: str = None
+    twitter_account: str = None
+    venue: Venue = None
+    venue_backup: Venue = None
+    national_competition_code: str = None
+    city: str = None
+    president: str = None
+    phone: str = None
+    images: dict = None
+
+
+@dec.nested_dataclass(frozen=True)
+class GameRecord:
+    category_code: str
+    category_name: str = None
+    value: int = None
+    opponent_team_name: str = None
+    season_code: str = None
+    game_code: int = None
+    phase_type: str = None
+    game_date: str = None
+    season_year: int = None
+
+
+@dec.nested_dataclass(frozen=True)
+class Video:
+    code: str = None
+    provider: str = None
+    title: str = None
+
 
 def _parse_referees(xml_data):
     root = etree.fromstring(bytes(xml_data, encoding='utf-8'))
@@ -91,7 +142,7 @@ def referees_1():
     # print(res)
 
 
-def referees(offset=0, limit=500):
+def all_referees(year=None, offset=0, limit=500, competition_code=None):
     """Retrieve all registered referees from Euroleague BasketBall .
 
     Parameters
@@ -114,6 +165,17 @@ def referees(offset=0, limit=500):
     """
     params = {'version': 2.0, 'offset': offset, 'limit': limit}
     url = client.build_url('referees', **params)
+    if competition_code and year is None:
+        url = client.build_url('competitions', competition_code,
+                               'referees', **params)
+    elif competition_code and year:
+        season_code = f'{competition_code}{year}'
+        url = client.build_url('competitions', competition_code,
+                               'seasons', season_code,
+                               'referees', **params)
+    elif competition_code is None and year:
+        warnings.warn('No competitions found, returning all referees')
+
     res = client.get(url)
     return [Referee(**r) for r in res.json()]
 
@@ -184,8 +246,8 @@ def venue(venue_code):
     return Venue(**res.json())
 
 
-def people(offset=0, limit=500, with_bio=True, with_seasons=True):
-    """Retrieve all registered people at Euroleague Basketball.
+def all_profile(offset=0, limit=500, with_bio=True, with_seasons=True):
+    """Retrieve all registered profile at Euroleague Basketball.
 
     Parameters
     ----------
@@ -207,12 +269,10 @@ def people(offset=0, limit=500, with_bio=True, with_seasons=True):
     params = {'version': 2.0, 'offset': offset, 'limit': limit}
     url = client.build_url('people', **params)
     res = client.get(url)
-
-
     return [Person(**utils.normalize_keys(r)) for r in res.json()]
 
 
-def person_profile(person_code, add_seasons=True): #008463 # 003331  #CWC
+def profile(person_code, career_history=True): #008463 # 003331  #CWC
     """Retrieve one registered person from Euroleague BasketBall.
 
     Parameters
@@ -231,5 +291,229 @@ def person_profile(person_code, add_seasons=True): #008463 # 003331  #CWC
     data = res.json()
     bio_url = client.build_url('people', person_code, "bio", **params)
     bio_res = client.get(bio_url)
-    data['bio'] = bio_res.json()
+    bio_res = bio_res.json()
+    bio_res['summary'] = bio_res.pop('career', None)
+    bio_res['highlights'] = bio_res.pop('misc', None)
+    data['bio'] = Bio(**bio_res)
+    if career_history:
+       extra_url = client.build_url('people', person_code, "seasons", **params)
+       extra_res = client.get(bio_url)
+
     return Person(**utils.normalize_keys(data))
+
+
+def all_teams(offset=0, limit=500):
+    """Retrieve all registered teams.
+
+    Parameters
+    ----------
+    offset: int, optional
+        Offset base zero
+    limit: int, optional
+        number of items to retrieve
+
+    Returns
+    -------
+    venues: list
+        desired venues
+
+    Notes
+    -----
+    On June 2021, there is 482 venues so no need to use limit or offset
+    parameters
+
+    """
+    params = {'version': 2.0, 'offset': offset, 'limit': limit}
+    url = client.build_url('clubs', **params)
+    res = client.get(url)
+    return [Team(**r) for r in res.json()]
+
+
+def team(team_code):
+    """Retrieve a team information.
+
+    Parameters
+    ----------
+    venue_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
+    """
+    params = {'version': 2.0}
+    url = client.build_url('clubs', team_code, **params)
+    res = client.get(url)
+    return Team(**res.json())
+
+
+def game_records(team_code, competition_code):
+    """Retrieve a team competition records per single game.
+
+    Parameters
+    ----------
+    venue_code: str
+        venue id
+
+    Returns
+    -------
+    game_records: dataclass
+        all information about the venue
+
+    """
+    params = {'version': 2.0}
+    url = client.build_url('clubs', team_code, 'competition', competition_code,
+                           'gamerecords', **params)
+    res = client.get(url)
+    return [GameRecord(**r) for r in res.json()]
+
+
+def player_highs(team_code, competition_code):
+    """Returns team competition player highs.
+
+    Parameters
+    ----------
+    venue_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
+    """
+    params = {'version': 2.0}
+    url = client.build_url('clubs', team_code, 'competition', competition_code,
+                           'playerhighs', **params)
+    res = client.get(url)
+    return [GameRecord(**r) for r in res.json()]
+
+
+def season_records(team_code, competition_code):
+    """Returns team competition player highs.
+
+    Parameters
+    ----------
+    team_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
+    """
+    params = {'version': 2.0}
+    url = client.build_url('clubs', team_code, 'competition', competition_code,
+                           'seasonrecords', **params)
+    res = client.get(url)
+    return [GameRecord(**r) for r in res.json()]
+
+
+def latest_team_videos(team_code):
+    """Returns the latest team videos.
+
+    Parameters
+    ----------
+    team_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
+    """
+    params = {'version': 2.0}
+    url = client.build_url('clubs', team_code, 'videos', **params)
+    res = client.get(url)
+    return [Video(**r) for r in res.json()]
+
+
+def all_competitions():
+    """Returns all available competitions.
+
+    Parameters
+    ----------
+    team_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
+    """
+    params = {'version': 2.0}
+    url = client.build_url('competitions', **params)
+    res = client.get(url)
+    return [Competition(**r) for r in res.json()]
+
+
+def competition(competition_code):
+    """Returns all available competitions.
+
+    Parameters
+    ----------
+    team_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
+    """
+    params = {'version': 2.0}
+    url = client.build_url('competitions', competition_code, **params)
+    res = client.get(url)
+    return Competition(**res.json())
+
+
+def all_seasons(competition_code):
+    """Returns all available competitions.
+
+    Parameters
+    ----------
+    team_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
+    """
+    params = {'version': 2.0}
+    url = client.build_url('competitions', competition_code, 'seasons',
+                           **params)
+    res = client.get(url)
+    return [Season(**r) for r in res.json()]
+
+
+def season(year, competition_code):
+    """Returns all available competitions.
+
+    Parameters
+    ----------
+    team_code: str
+        venue id
+
+    Returns
+    -------
+    venue: dataclass
+        all information about the venue
+
+    """
+    season_code = f'{competition_code}{year}'
+    params = {'version': 2.0}
+    url = client.build_url('competitions', competition_code, 'seasons',
+                           season_code, **params)
+    res = client.get(url)
+    return [Season(**r) for r in res.json()]
+
+
+
+
