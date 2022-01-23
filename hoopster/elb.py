@@ -90,7 +90,7 @@ class Team:
     code: str
     name: str = None
     alias: str = None
-    is_virtual: bool = False
+    is_virtual: bool = True
     country: Country = None
     address: str = None
     website: str = None
@@ -302,7 +302,7 @@ def profile(person_code, career_history=True): #008463 # 003331  #CWC
     return Person(**utils.normalize_keys(data))
 
 
-def all_teams(offset=0, limit=500):
+def all_teams(offset=0, limit=700):
     """Retrieve all registered teams.
 
     Parameters
@@ -319,14 +319,23 @@ def all_teams(offset=0, limit=500):
 
     Notes
     -----
-    On June 2021, there is 482 venues so no need to use limit or offset
+    On June 2021, there is 666 teams so no need to use limit or offset
     parameters
 
     """
     params = {'version': 2.0, 'offset': offset, 'limit': limit}
     url = client.build_url('clubs', **params)
     res = client.get(url)
-    return [Team(**r) for r in res.json()]
+    teams = []
+    for team in res.json():
+        team["is_virtual"] = team.pop('isVirtual')
+        team["tickets_url"] = team.pop('ticketsUrl')
+        team["twitter_account"] = team.pop('twitterAccount')
+        team["venue_backup"] = team.pop('venueBackup')
+        team["national_competition_code"] = team.pop('nationalCompetitionCode')
+
+        teams.append(Team(**team))
+    return teams
 
 
 def team(team_code):
@@ -346,7 +355,13 @@ def team(team_code):
     params = {'version': 2.0}
     url = client.build_url('clubs', team_code, **params)
     res = client.get(url)
-    return Team(**res.json())
+    current_team = res.json()
+    current_team["is_virtual"] = current_team.pop('isVirtual')
+    current_team["tickets_url"] = current_team.pop('ticketsUrl')
+    current_team["twitter_account"] = current_team.pop('twitterAccount')
+    current_team["venue_backup"] = current_team.pop('venueBackup')
+    current_team["national_competition_code"] = current_team.pop('nationalCompetitionCode')
+    return Team(**current_team)
 
 
 def game_records(team_code, competition_code):
