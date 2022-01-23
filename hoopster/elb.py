@@ -105,6 +105,18 @@ class Team:
     images: dict = None
 
 
+@dataclass(frozen=True)
+class Season:
+    code: str
+    name: str = None
+    alias: str = None
+    competition_code: str = None
+    year: int = None
+    start_date: str = None
+    end_date: str = None
+    activation_date: str = None
+
+
 @dec.nested_dataclass(frozen=True)
 class GameRecord:
     category_code: str
@@ -386,7 +398,7 @@ def game_records(team_code, competition_code):
 
 
 def player_highs(team_code, competition_code):
-    """Returns team competition player highs.
+    """Return team competition player highs.
 
     Parameters
     ----------
@@ -407,7 +419,7 @@ def player_highs(team_code, competition_code):
 
 
 def season_records(team_code, competition_code):
-    """Returns team competition player highs.
+    """Return team competition player highs.
 
     Parameters
     ----------
@@ -428,7 +440,7 @@ def season_records(team_code, competition_code):
 
 
 def latest_team_videos(team_code):
-    """Returns the latest team videos.
+    """Return the latest team videos.
 
     Parameters
     ----------
@@ -448,7 +460,7 @@ def latest_team_videos(team_code):
 
 
 def all_competitions():
-    """Returns all available competitions.
+    """Return all available competitions.
 
     Parameters
     ----------
@@ -468,7 +480,7 @@ def all_competitions():
 
 
 def competition(competition_code):
-    """Returns all available competitions.
+    """Return all available competitions.
 
     Parameters
     ----------
@@ -488,7 +500,7 @@ def competition(competition_code):
 
 
 def all_seasons(competition_code):
-    """Returns all available competitions.
+    """Return all available competitions.
 
     Parameters
     ----------
@@ -505,11 +517,18 @@ def all_seasons(competition_code):
     url = client.build_url('competitions', competition_code, 'seasons',
                            **params)
     res = client.get(url)
-    return [Season(**r) for r in res.json()]
+    seasons = []
+    for season in res.json():
+        season['start_date'] = season.pop('startDate')
+        season['end_date'] = season.pop('endDate')
+        season['activation_date'] = season.pop('activationDate')
+        season['competition_code'] = season.pop('competitionCode')
+        seasons.append(Season(**season))
+    return seasons
 
 
 def season(year, competition_code):
-    """Returns all available competitions.
+    """Return all available competitions.
 
     Parameters
     ----------
@@ -527,7 +546,13 @@ def season(year, competition_code):
     url = client.build_url('competitions', competition_code, 'seasons',
                            season_code, **params)
     res = client.get(url)
-    return [Season(**r) for r in res.json()]
+    season = res.json()
+    season['start_date'] = season.pop('startDate')
+    season['end_date'] = season.pop('endDate')
+    season['activation_date'] = season.pop('activationDate')
+    season['competition_code'] = season.pop('competitionCode')
+
+    return Season(**season)
 
 
 
