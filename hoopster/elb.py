@@ -35,6 +35,13 @@ class Competition:
 
 
 @dataclass(frozen=True)
+class Coach:
+    """Object for defining a coach."""
+
+    code: str
+    name: str = None
+
+@dataclass(frozen=True)
 class Bio:
     """Object for defining a person bio."""
 
@@ -89,13 +96,15 @@ class Team:
 
     code: str
     name: str = None
+    abbreviated_name: str = None
     alias: str = None
-    is_virtual: bool = True
+    is_virtual: bool = False
     country: Country = None
     address: str = None
     website: str = None
     tickets_url: str = None
     twitter_account: str = None
+    tv_code: str = None
     venue: Venue = None
     venue_backup: Venue = None
     national_competition_code: str = None
@@ -106,18 +115,6 @@ class Team:
 
 
 @dataclass(frozen=True)
-class Season:
-    code: str
-    name: str = None
-    alias: str = None
-    competition_code: str = None
-    year: int = None
-    start_date: str = None
-    end_date: str = None
-    activation_date: str = None
-
-
-@dec.nested_dataclass(frozen=True)
 class GameRecord:
     category_code: str
     category_name: str = None
@@ -130,11 +127,154 @@ class GameRecord:
     season_year: int = None
 
 
-@dec.nested_dataclass(frozen=True)
+@dataclass(frozen=True)
 class Video:
     code: str = None
     provider: str = None
     title: str = None
+
+
+@dataclass(frozen=True)
+class Season:
+    name: str = None
+    code: str = None
+    alias: str = None
+    competition_code: str = None
+    year: int = None
+
+
+@dec.nested_dataclass(frozen=True)
+class PlayerSeason:
+    person: Person = None
+    type: str = None
+    type_name: str = None
+    active: bool = True
+    start_date: str = None
+    end_date: str = None
+    dorsal: str = None
+    dorsal_raw: str = None
+    position: int = None
+    position_name: str = None
+    last_team: str = None
+    images: dict = None
+    club: Team = None
+    season: Season = None
+
+@dataclass(frozen=True)
+class Group:
+    id: int = None
+    order: int = None
+    name: str = None
+    raw_name: str = None
+
+
+@dec.nested_dataclass(frozen=True)
+class PhaseType:
+    code: str = None
+    alias: str = None
+    name: str = None
+    is_group_phase: bool = True
+
+
+@dec.nested_dataclass(frozen=True)
+class GameTeam:
+    team: Team = None
+    score: int = None
+    standings_score: int = None
+
+@dec.nested_dataclass(frozen=True)
+class Game:
+    game_code: int = None
+    season: Season = None
+    group: Group = None
+    phase_type: PhaseType = None
+    round: int = None
+    round_alias: str = None
+    round_name: str = None
+    played: bool = True
+    date: str = None
+    confirmed_date: bool = True
+    confirmed_hour: bool = True
+    local_time_zone: int = None
+    local_date: str = None
+    utc_date: str = None
+    local: GameTeam = None
+    road: GameTeam = None
+
+
+@dataclass(frozen=True)
+class Stats:
+    time_played: int = None
+    valuation: int = None
+    points: int = None
+    field_goals_made2: int = None
+    field_goals_attempted2: int = None
+    field_goals_made3: int = None
+    field_goals_attempted3: int = None
+    free_throws_made: int = None
+    free_throws_attempted: int = None
+    field_goals_made_total: int = None
+    field_goals_attempted_total: int = None
+    accuracy_made: int = None
+    accuracy_attempted: int = None
+    total_rebounds: int = None
+    defensive_rebounds: int = None
+    offensive_rebounds: int = None
+    assistances: int = None
+    steals: int = None
+    turnovers: int = None
+    blocks_favour: int = None
+    blocks_against: int = None
+    fouls_commited: int = None
+    fouls_received: int = None
+    plus_minus: int = None
+
+    @property
+    def effective_field_goal(self):
+        """eFG%"""
+        return 100*(self.field_goals_made2 +
+                    0.5*self.field_goals_made3) / self.field_goals_attempted_total
+
+    @property
+    def true_shooting(self):
+        """TS% True shooting percentage measures each
+        player's shooting efficiency"""
+        return  100*self.points/(2*(self.field_goals_attempted_total+0.44*self.free_throws_attempted))
+
+    @property
+    def turnover_percentage(self):
+        """TOV% (Turnovers percentage)
+        Turnover percentage is an estimate of a player's turnovers per 100 individual plays
+        """
+        return 100*self.turnovers/(self.field_goals_attempted_total+0.44*self.free_throws_attempted+self.assistances+self.turnovers)
+
+
+@dataclass(frozen=True)
+class PlayerStats(Stats):
+    dorsal: str = None
+    start_five: bool = True
+    start_five2: bool = True
+
+
+@dec.nested_dataclass(frozen=True)
+class GamePlayerStats:
+    player: PlayerSeason = None
+    stats: PlayerStats = None
+
+
+@dec.nested_dataclass(frozen=True)
+class GameTeamStats:
+    coach: Coach = None
+    players: list[GamePlayerStats] = None
+    team: Stats = None
+    total: Stats = None
+
+@dec.nested_dataclass(frozen=True)
+class GameStats:
+    local: GameTeamStats = None
+    road: GameTeamStats = None
+
+
 
 
 def _parse_referees(xml_data):
@@ -314,7 +454,7 @@ def profile(person_code, career_history=True): #008463 # 003331  #CWC
     return Person(**utils.normalize_keys(data))
 
 
-def all_teams(offset=0, limit=700):
+def all_teams(offset=0, limit=500):
     """Retrieve all registered teams.
 
     Parameters
@@ -331,23 +471,14 @@ def all_teams(offset=0, limit=700):
 
     Notes
     -----
-    On June 2021, there is 666 teams so no need to use limit or offset
+    On June 2021, there is 482 venues so no need to use limit or offset
     parameters
 
     """
     params = {'version': 2.0, 'offset': offset, 'limit': limit}
     url = client.build_url('clubs', **params)
     res = client.get(url)
-    teams = []
-    for team in res.json():
-        team["is_virtual"] = team.pop('isVirtual')
-        team["tickets_url"] = team.pop('ticketsUrl')
-        team["twitter_account"] = team.pop('twitterAccount')
-        team["venue_backup"] = team.pop('venueBackup')
-        team["national_competition_code"] = team.pop('nationalCompetitionCode')
-
-        teams.append(Team(**team))
-    return teams
+    return [Team(**r) for r in res.json()]
 
 
 def team(team_code):
@@ -367,13 +498,7 @@ def team(team_code):
     params = {'version': 2.0}
     url = client.build_url('clubs', team_code, **params)
     res = client.get(url)
-    current_team = res.json()
-    current_team["is_virtual"] = current_team.pop('isVirtual')
-    current_team["tickets_url"] = current_team.pop('ticketsUrl')
-    current_team["twitter_account"] = current_team.pop('twitterAccount')
-    current_team["venue_backup"] = current_team.pop('venueBackup')
-    current_team["national_competition_code"] = current_team.pop('nationalCompetitionCode')
-    return Team(**current_team)
+    return Team(**res.json())
 
 
 def game_records(team_code, competition_code):
@@ -398,7 +523,7 @@ def game_records(team_code, competition_code):
 
 
 def player_highs(team_code, competition_code):
-    """Return team competition player highs.
+    """Returns team competition player highs.
 
     Parameters
     ----------
@@ -419,7 +544,7 @@ def player_highs(team_code, competition_code):
 
 
 def season_records(team_code, competition_code):
-    """Return team competition player highs.
+    """Returns team competition player highs.
 
     Parameters
     ----------
@@ -440,7 +565,7 @@ def season_records(team_code, competition_code):
 
 
 def latest_team_videos(team_code):
-    """Return the latest team videos.
+    """Returns the latest team videos.
 
     Parameters
     ----------
@@ -460,7 +585,7 @@ def latest_team_videos(team_code):
 
 
 def all_competitions():
-    """Return all available competitions.
+    """Returns all available competitions.
 
     Parameters
     ----------
@@ -480,7 +605,7 @@ def all_competitions():
 
 
 def competition(competition_code):
-    """Return all available competitions.
+    """Returns all available competitions.
 
     Parameters
     ----------
@@ -500,7 +625,7 @@ def competition(competition_code):
 
 
 def all_seasons(competition_code):
-    """Return all available competitions.
+    """Returns all available competitions.
 
     Parameters
     ----------
@@ -517,18 +642,11 @@ def all_seasons(competition_code):
     url = client.build_url('competitions', competition_code, 'seasons',
                            **params)
     res = client.get(url)
-    seasons = []
-    for season in res.json():
-        season['start_date'] = season.pop('startDate')
-        season['end_date'] = season.pop('endDate')
-        season['activation_date'] = season.pop('activationDate')
-        season['competition_code'] = season.pop('competitionCode')
-        seasons.append(Season(**season))
-    return seasons
+    return [Season(**r) for r in res.json()]
 
 
 def season(year, competition_code):
-    """Return all available competitions.
+    """Returns all available competitions.
 
     Parameters
     ----------
@@ -546,14 +664,60 @@ def season(year, competition_code):
     url = client.build_url('competitions', competition_code, 'seasons',
                            season_code, **params)
     res = client.get(url)
-    season = res.json()
-    season['start_date'] = season.pop('startDate')
-    season['end_date'] = season.pop('endDate')
-    season['activation_date'] = season.pop('activationDate')
-    season['competition_code'] = season.pop('competitionCode')
-
-    return Season(**season)
+    return [Season(**r) for r in res.json()]
 
 
+def games(competition_code, season_code, only_played=False):
+    """Returns all games from a competition season
+
+    Parameters
+    ----------
+    competition_code : [type]
+        [description]
+    season_code : [type]
+        [description]
+    """
+    params = {'version': 2.0}
+    url = client.build_url('competitions', competition_code, 'seasons',
+                           season_code, 'games', **params)
+    res = client.get(url)
+    games = []
+    for game in res.json():
+        game["season"] = utils.normalize_keys(game["season"])
+        game["group"] = utils.normalize_keys(game["group"])
+        game["phase_type"] = utils.normalize_keys(game.pop("phaseType"))
+        game["local"] = utils.normalize_keys(game["local"])
+        game["road"] = utils.normalize_keys(game["road"])
+        game["local"]["team"] = utils.normalize_keys(game["local"].pop("club"))
+        game["road"]["team"] = utils.normalize_keys(game["road"].pop("club"))
+        # import ipdb; ipdb.set_trace()
+        current = Game(**utils.normalize_keys(game))
+        if not only_played:
+            games += [current, ]
+            continue
+        if current.played:
+            games += [current, ]
+    return games
 
 
+def game_stats(competition_code, season_code, game_code):
+    """Returns all games from a competition season
+
+    Parameters
+    ----------
+    competition_code : [type]
+        [description]
+    season_code : [type]
+        [description]
+    """
+    params = {'version': 2.0}
+    url = client.build_url('competitions', competition_code, 'seasons',
+                           season_code, 'games', game_code, 'stats', **params)
+    res = client.get(url)
+    game = utils.normalize_nested_dict_keys(res.json())
+    game = GameStats(**game)
+    return game
+
+
+if __name__ == "__main__":
+    g = game_stats('E', 'E2021', 68)
