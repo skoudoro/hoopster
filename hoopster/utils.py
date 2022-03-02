@@ -14,3 +14,13 @@ def normalize_keys(data):
     new_data = dict((camel_to_snake(key), value)
                     for (key, value) in data.items())
     return new_data
+
+
+def normalize_nested_dict_keys(data):
+    data = normalize_keys(data)
+    for k, v in data.items():
+        if isinstance(v, dict):     # For DICT
+            data[k] = normalize_nested_dict_keys(v)
+        elif isinstance(v, list):   # For LIST
+            data[k] = [normalize_nested_dict_keys(i) for i in v]
+    return data
